@@ -2,11 +2,24 @@
 using System.Runtime.ExceptionServices;
 
 
-for (int i = 0; i < 100; i++)
+foreach (var i in Count(100))
 {
-    MyTask.Delay(2000);
     Console.WriteLine(i);
 }
+
+IEnumerable<int> Count(int count)
+{
+    for (int i = 0; i < count; i++)
+    {
+        yield return i;
+    }
+}
+
+// for (int i = 0; i < 100; i++)
+// {
+//     MyTask.Delay(2000).Wait();
+//     Console.WriteLine(i);
+// }
 
 class MyTask
 {
@@ -85,7 +98,7 @@ class MyTask
     {
         MyTask t = new();
 
-        Action callback = () => 
+        Action callback = () =>
         {
             try
             {
@@ -115,17 +128,18 @@ class MyTask
         return t;
     }
 
-        public MyTask ContinueWith(Func<MyTask> action)
+    public MyTask ContinueWith(Func<MyTask> action)
     {
         MyTask t = new();
 
-        Action callback = () => 
+        Action callback = () =>
         {
             try
             {
                 MyTask next = action();
-                next.ContinueWith(delegate {
-                    if(next._exception is not null)
+                next.ContinueWith(delegate
+                {
+                    if (next._exception is not null)
                     {
                         t.SetException(next._exception);
                     }
@@ -192,9 +206,9 @@ class MyTask
         {
             int remaining = tasks.Count;
 
-            Action continuation = () => 
+            Action continuation = () =>
             {
-                if(Interlocked.Decrement(ref remaining) == 0)
+                if (Interlocked.Decrement(ref remaining) == 0)
                 {
                     // TODO : exceptions
                     t.SetResult();
