@@ -4,7 +4,7 @@ AsyncLocal<int> myValue = new();
 for (int i = 0; i < 1000; i++)
 {
     myValue.Value = i;
-    ThreadPool.QueueUserWorkItem(delegate {
+    MyThreadPool.QueueUserWorkItem(delegate {
         Console.WriteLine(myValue.Value);
         Thread.Sleep(1000);
     });
