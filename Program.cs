@@ -1,19 +1,11 @@
 ﻿using System.Collections.Concurrent;
 using System.Runtime.ExceptionServices;
-Console.WriteLine($"ThreadPool number is : {Environment.ProcessorCount}");
 
-AsyncLocal<int> myValue = new();
-List<MyTask> tasks = new();
-for (int i = 0; i < 100; i++)
-{
-    myValue.Value = i;
-    tasks.Add(MyTask.Run(delegate
-    {
-        Console.WriteLine(myValue.Value);
-        Thread.Sleep(1000);
-    }));
-}
-MyTask.WhenAll(tasks).Wait();
+
+Console.WriteLine("Hello");
+MyTask.Delay(2000).ContinueWith(() => {
+    Console.WriteLine("Sinan");
+}).Wait();
 
 class MyTask
 {
@@ -88,20 +80,38 @@ class MyTask
         }
     }
 
-    public void ContinueWith(Action action)
+    public MyTask ContinueWith(Action action)
     {
+        MyTask t = new();
+
+        Action callback = () => 
+        {
+            try
+            {
+                action();
+            }
+            catch (Exception ex)
+            {
+                t.SetException(ex);
+                return;
+            }
+            t.SetResult();
+        };
+
         lock (this)
         {
             if (_completed)
             {
-                MyThreadPool.QueueUserWorkItem(action);
+                MyThreadPool.QueueUserWorkItem(callback);
             }
             else
             {
-                _continuation = action;
+                _continuation = callback;
                 _context = ExecutionContext.Capture();
             }
         }
+
+        return t;
     }
 
     public static MyTask Run(Action action)
