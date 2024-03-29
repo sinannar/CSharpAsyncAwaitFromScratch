@@ -1,26 +1,35 @@
 ﻿using System.Collections.Concurrent;
+using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 
 
-MyTask.Iterate(PrintAsync()).Wait();
+await MyTask.Delay(1000)
+    .ContinueWith(() => {Console.WriteLine("Hello");})
+    .ContinueWith(() => {return MyTask.Delay(1000);})
+    .ContinueWith(() => {Console.WriteLine("World");})
+    .ContinueWith(() => {return MyTask.Delay(1000);})
+    .ContinueWith(() => {Console.WriteLine("How");})
+    .ContinueWith(() => {return MyTask.Delay(1000);})
+    .ContinueWith(() => {Console.WriteLine("Is");})
+    .ContinueWith(() => {return MyTask.Delay(1000);})
+    .ContinueWith(() => {Console.WriteLine("It");})
+    .ContinueWith(() => {return MyTask.Delay(1000);})
+    .ContinueWith(() => {Console.WriteLine("Going");})
+    .ContinueWith(() => {return MyTask.Delay(1000);});
 
-static IEnumerable<MyTask> PrintAsync()
-{
-    for (int i = 0; i < 100; i++)
-    {
-        yield return MyTask
-            .Delay(1000).ContinueWith(() => 
-            {
-                Console.WriteLine(i);
-            });
-    }
-}
-
-// for (int i = 0; i < 100; i++)
-// {
-//     MyTask.Delay(2000).Wait();
-//     Console.WriteLine(i);
-// }
+// await MyTask.Delay(1000)
+//     .ContinueWith(() => {Console.WriteLine("Hello");})
+//     .ContinueWith(async () => {await MyTask.Delay(1000);})
+//     .ContinueWith(() => {Console.WriteLine("World");})
+//     .ContinueWith(async () => {await MyTask.Delay(1000);})
+//     .ContinueWith(() => {Console.WriteLine("How");})
+//     .ContinueWith(async () => {await MyTask.Delay(1000);})
+//     .ContinueWith(() => {Console.WriteLine("Is");})
+//     .ContinueWith(async () => {await MyTask.Delay(1000);})
+//     .ContinueWith(() => {Console.WriteLine("It");})
+//     .ContinueWith(async () => {await MyTask.Delay(1000);})
+//     .ContinueWith(() => {Console.WriteLine("Going");})
+//     .ContinueWith(async () => {await MyTask.Delay(1000);});
 
 class MyTask
 {
@@ -28,6 +37,15 @@ class MyTask
     private Exception? _exception;
     private Action? _continuation;
     private ExecutionContext? _context;
+
+    public struct Awaiter(MyTask t) : INotifyCompletion
+    {
+        public Awaiter GetAwaiter() => this;
+        public bool IsCompleted => t.IsCompleted;
+        public void OnCompleted(Action continuation) => t.ContinueWith(continuation);
+        public void GetResult() => t.Wait();
+    }
+    public Awaiter GetAwaiter() => new(this);
 
     public bool IsCompleted
     {
