@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+Console.WriteLine($"ThreadPool number is : { Environment.ProcessorCount}");
 
 AsyncLocal<int> myValue = new();
 for (int i = 0; i < 1000; i++)
