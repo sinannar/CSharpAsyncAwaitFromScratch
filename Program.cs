@@ -2,16 +2,14 @@
 using System.Runtime.ExceptionServices;
 
 
-foreach (var i in Count(100))
-{
-    Console.WriteLine(i);
-}
+MyTask.Iterate(PrintAsync()).Wait();
 
-IEnumerable<int> Count(int count)
+static IEnumerable<MyTask> PrintAsync()
 {
-    for (int i = 0; i < count; i++)
+    for (int i = 0; i < 100; i++)
     {
-        yield return i;
+        yield return MyTask.Delay(1000);
+        Console.WriteLine(i);
     }
 }
 
@@ -228,6 +226,36 @@ class MyTask
     {
         MyTask t = new();
         new Timer(_ => t.SetResult()).Change(timeout, -1);
+        return t;
+    }
+
+    public static MyTask Iterate(IEnumerable<MyTask> tasks)
+    {
+        MyTask t = new();
+
+        IEnumerator<MyTask> e = tasks.GetEnumerator();
+
+        void MoveNext()
+        {
+            try
+            {
+                if(e.MoveNext())
+                {
+                    MyTask next = e.Current;
+                    next.ContinueWith(MoveNext);
+                    return;
+                }
+            }
+            catch (Exception ex)
+            {
+                t.SetException(ex);
+                return;
+            }
+            t.SetResult();
+        }
+
+        MoveNext();
+
         return t;
     }
 }
