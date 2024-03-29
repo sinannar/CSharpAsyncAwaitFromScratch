@@ -2,7 +2,6 @@
 using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 
-
 await MyTask.Delay(1000)
     .ContinueWith(() => {Console.WriteLine("Hello");})
     .ContinueWith(() => {return MyTask.Delay(1000);})
