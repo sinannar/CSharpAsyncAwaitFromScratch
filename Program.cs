@@ -2,8 +2,9 @@
 #region V1
 for (int i = 0; i < 1000; i++)
 {
+    int capturedValue = i;
     ThreadPool.QueueUserWorkItem(delegate {
-        Console.WriteLine(i);
+        Console.WriteLine(capturedValue);
         Thread.Sleep(1000);
     });
 }
