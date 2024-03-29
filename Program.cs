@@ -14,10 +14,10 @@ Console.ReadLine();
 
 static class MyThreadPool
 {
-    private static readonly BlockingCollection<Action> s_workItems = new();
+    private static readonly BlockingCollection<(Action, ExecutionContext?)> s_workItems = new();
     public static void QueueUserWorkItem(Action action)
     {
-        s_workItems.Add(action);
+        s_workItems.Add((action, ExecutionContext.Capture()));
     }
 
     static MyThreadPool()
@@ -26,8 +26,14 @@ static class MyThreadPool
         {
             new Thread(() => {
                 while(true){
-                    var workItem = s_workItems.Take();
-                    workItem();
+                    (Action workItem, ExecutionContext? context) = s_workItems.Take();
+                    if(context is null)
+                    {
+                        workItem();
+                    }
+                    else{
+                        ExecutionContext.Run(context, delegate { workItem(); }, null);
+                    }
                 }
             })
             {IsBackground = true}.Start();
