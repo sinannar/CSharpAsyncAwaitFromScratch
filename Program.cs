@@ -8,8 +8,11 @@ static IEnumerable<MyTask> PrintAsync()
 {
     for (int i = 0; i < 100; i++)
     {
-        yield return MyTask.Delay(1000);
-        Console.WriteLine(i);
+        yield return MyTask
+            .Delay(1000).ContinueWith(() => 
+            {
+                Console.WriteLine(i);
+            });
     }
 }
 
