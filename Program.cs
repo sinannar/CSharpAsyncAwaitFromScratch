@@ -32,7 +32,7 @@ static class MyThreadPool
                         workItem();
                     }
                     else{
-                        ExecutionContext.Run(context, delegate { workItem(); }, null);
+                        ExecutionContext.Run(context, state => ((Action)state!).Invoke() , workItem);
                     }
                 }
             })
