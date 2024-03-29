@@ -4,7 +4,7 @@ Console.WriteLine($"ThreadPool number is : {Environment.ProcessorCount}");
 
 AsyncLocal<int> myValue = new();
 List<MyTask> tasks = new();
-for (int i = 0; i < 10; i++)
+for (int i = 0; i < 100; i++)
 {
     myValue.Value = i;
     tasks.Add(MyTask.Run(delegate
@@ -13,10 +13,7 @@ for (int i = 0; i < 10; i++)
         Thread.Sleep(1000);
     }));
 }
-foreach (var task in tasks)
-{
-    task.Wait();
-}
+MyTask.WhenAll(tasks).Wait();
 
 class MyTask
 {
@@ -128,6 +125,42 @@ class MyTask
         return task;
     }
 
+    public static MyTask WhenAll(List<MyTask> tasks)
+    {
+        MyTask t = new();
+
+        if (tasks.Count == 0)
+        {
+            t.SetResult();
+        }
+        else
+        {
+            int remaining = tasks.Count;
+
+            Action continuation = () => 
+            {
+                if(Interlocked.Decrement(ref remaining) == 0)
+                {
+                    // TODO : exceptions
+                    t.SetResult();
+                }
+            };
+
+            foreach (var task in tasks)
+            {
+                task.ContinueWith(continuation);
+            }
+        }
+
+        return t;
+    }
+
+    public static MyTask Delay(int timeout)
+    {
+        MyTask t = new();
+        new Timer(_ => t.SetResult()).Change(timeout, -1);
+        return t;
+    }
 }
 
 static class MyThreadPool
