@@ -2,19 +2,11 @@
 using System.Runtime.ExceptionServices;
 
 
-Console.WriteLine("Hello");
-MyTask.Delay(2000).ContinueWith(() => 
+for (int i = 0; i < 100; i++)
 {
-    Console.WriteLine("Sinan");
-    return MyTask.Delay(2000).ContinueWith(() => 
-    {
-        Console.WriteLine("AAA");
-        return MyTask.Delay(2000).ContinueWith(() => 
-        {
-            Console.WriteLine("BBB");
-        });
-    });
-}).Wait();
+    MyTask.Delay(2000);
+    Console.WriteLine(i);
+}
 
 class MyTask
 {
