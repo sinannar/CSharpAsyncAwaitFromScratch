@@ -1,17 +1,22 @@
 ﻿using System.Collections.Concurrent;
+using System.Runtime.ExceptionServices;
 Console.WriteLine($"ThreadPool number is : {Environment.ProcessorCount}");
 
 AsyncLocal<int> myValue = new();
-for (int i = 0; i < 1000; i++)
+List<MyTask> tasks = new();
+for (int i = 0; i < 10; i++)
 {
     myValue.Value = i;
-    MyThreadPool.QueueUserWorkItem(delegate
+    tasks.Add(MyTask.Run(delegate
     {
         Console.WriteLine(myValue.Value);
         Thread.Sleep(1000);
-    });
+    }));
 }
-Console.ReadLine();
+foreach (var task in tasks)
+{
+    task.Wait();
+}
 
 class MyTask
 {
@@ -24,17 +29,104 @@ class MyTask
     {
         get
         {
-            return _completed;
+            lock (this)
+            {
+                return _completed;
+            }
         }
     }
 
-    public void SetResult() { }
+    public void SetResult()
+    {
+        Complete(null);
+    }
 
-    public void SetException(Exception exception) { }
+    public void SetException(Exception exception)
+    {
+        Complete(exception);
+    }
 
-    public void Wait() { }
+    private void Complete(Exception? exception)
+    {
+        lock (this)
+        {
+            if (_completed)
+            {
+                throw new InvalidOperationException("Stop messing up my code");
+            }
+            _completed = true;
+            _exception = exception;
+            if (_continuation is not null)
+            {
+                MyThreadPool.QueueUserWorkItem(delegate
+                {
+                    if (_context is null)
+                    {
+                        _continuation();
+                    }
+                    else
+                    {
+                        ExecutionContext.Run(_context, state => ((Action)state!).Invoke(), _continuation);
+                    }
+                });
+            }
+        }
+    }
 
-    public void ContinueWith(Action action) { }
+    public void Wait()
+    {
+        ManualResetEventSlim? mres = null;
+        lock (this)
+        {
+            if (!_completed)
+            {
+                mres = new ManualResetEventSlim();
+                ContinueWith(mres.Set);
+            }
+        }
+        mres?.Wait();
+        if (_exception is not null)
+        {
+            ExceptionDispatchInfo.Throw(_exception); // does not change exception stack
+        }
+    }
+
+    public void ContinueWith(Action action)
+    {
+        lock (this)
+        {
+            if (_completed)
+            {
+                MyThreadPool.QueueUserWorkItem(action);
+            }
+            else
+            {
+                _continuation = action;
+                _context = ExecutionContext.Capture();
+            }
+        }
+    }
+
+    public static MyTask Run(Action action)
+    {
+        MyTask task = new();
+
+        MyThreadPool.QueueUserWorkItem(() =>
+        {
+            try
+            {
+                action();
+            }
+            catch (Exception e)
+            {
+                task.SetException(e);
+                return;
+            }
+            task.SetResult();
+        });
+
+        return task;
+    }
 
 }
 
