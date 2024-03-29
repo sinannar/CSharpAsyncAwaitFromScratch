@@ -1,10 +1,11 @@
 ﻿using System.Collections.Concurrent;
 
+AsyncLocal<int> myValue = new();
 for (int i = 0; i < 1000; i++)
 {
-    int capturedValue = i;
-    MyThreadPool.QueueUserWorkItem(delegate {
-        Console.WriteLine(capturedValue);
+    myValue.Value = i;
+    ThreadPool.QueueUserWorkItem(delegate {
+        Console.WriteLine(myValue.Value);
         Thread.Sleep(1000);
     });
 }
